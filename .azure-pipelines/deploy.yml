@@ -1,0 +1,131 @@
+trigger: none
+
+parameters:
+- name: environmentName
+  type: string
+  default: 'dev'
+  values:
+  - 'dev'
+  - 'prod'
+- name: geographyName
+  type: string
+  default: 'EUR'
+  values:
+  - 'EUR'
+  - 'USA'
+
+variables:
+# Common variables for all regions
+- group: scaler-variables
+# Region-specific overrides
+- ${{ if eq(parameters.geographyName, 'EUR') }}:
+  - group: scaler-variables-eur
+- ${{ if eq(parameters.geographyName, 'USA') }}:
+  - group: scaler-variables-usa
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Deploy
+  displayName: 'Deploy Container'
+  jobs:
+  - deployment: Deploy
+    displayName: 'Deploy to ACI'
+    environment: ${{ parameters.environmentName }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            displayName: 'Checkout repository'
+
+          - task: AzureCLI@2
+            displayName: 'Deploy to Azure Container Instance'
+            inputs:
+              azureSubscription: 'xyz'
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                # Use envsubst to replace variables in template
+                export containerName=$(containerName)
+                export acrName=$(acrName)
+                export redisHost=$(redisHost)
+                export redisPort=$(redisPort)
+                export azureSubscriptionId=$(azureSubscriptionId)
+                export azureTenantId=$(azureTenantId)
+                export resourceGroup=$(resourceGroup)
+                export vmssName=$(vmssName)
+                export appInsightsKey=$(appInsightsKey)
+                export acrUsername=$(acrUsername)
+                export acrPassword=$(acrPassword)
+                export vnetName=$(vnetName)
+                export subnetName=$(subnetName)
+                export appGWName=$(appGWName)
+                export appGWPathMapName=$(appGWPathMapName)
+                export geoName=${{ parameters.geographyName }}
+                export location=$(location)
+                export configName=$(configName)
+
+                # Install envsubst
+                apt-get update && apt-get install -y gettext-base
+
+                # Process template
+                envsubst < "$(Build.SourcesDirectory)/.azure-pipelines/templates/container-group.yml" > container-group-parsed.yml
+
+                # Deploy container group
+                az container create \
+                  --resource-group $(resourceGroup) \
+                  --file container-group-parsed.yml
+
+                # Get the managed identity principal ID
+                echo "Getting managed identity for ACI..."
+                principalId=$(az container show \
+                  --name $(containerName) \
+                  --resource-group $(resourceGroup) \
+                  --query identity.principalId \
+                  --output tsv)
+
+                # Assign VM Contributor role
+                echo "Assigning VM Contributor role..."
+                az role assignment create \
+                  --assignee-object-id $principalId \
+                  --assignee-principal-type ServicePrincipal \
+                  --role "Virtual Machine Contributor" \
+                  --scope "/subscriptions/$(azureSubscriptionId)/resourceGroups/$(resourceGroup)"
+
+                # Assign Redis Data Owner access policy
+                echo "Assigning Redis Data Owner Access Policy..."
+                az redis access-policy-assignment create \
+                  --resource-group $(resourceGroup) \
+                  --name $(redisName) \
+                  --object-id $principalId \
+                  --object-id-alias $(containerName) \
+                  --access-policy-name "Data Owner" \
+                  --policy-assignment-name $(containerName)-pa
+
+                # Assign Network Contributor role for managing AppGW path-based rules
+                echo "Assigning Network Contributor role for AppGW and VNet..."
+                
+                # For App Gateway
+                az role assignment create \
+                  --assignee-object-id $principalId \
+                  --assignee-principal-type ServicePrincipal \
+                  --role "Network Contributor" \
+                  --scope "/subscriptions/$(azureSubscriptionId)/resourceGroups/$(resourceGroup)/providers/Microsoft.Network/applicationGateways/$(appGWName)"
+
+                # For VNet/Subnet
+                az role assignment create \
+                  --assignee-object-id $principalId \
+                  --assignee-principal-type ServicePrincipal \
+                  --role "Network Contributor" \
+                  --scope "/subscriptions/$(azureSubscriptionId)/resourceGroups/$(resourceGroup)/providers/Microsoft.Network/virtualNetworks/$(vnetName)"
+                
+                # For App Configuration Service
+                az role assignment create \
+                  --assignee-object-id $principalId \
+                  --assignee-principal-type ServicePrincipal \
+                  --role "App Configuration Data Owner" \
+                  --scope "/subscriptions/$(azureSubscriptionId)/resourceGroups/$(resourceGroup)/providers/Microsoft.AppConfiguration/configurationStores/$(configName)"
+
+                echo "Roles and access policy assignments completed successfully."

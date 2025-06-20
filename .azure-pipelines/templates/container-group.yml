@@ -1,0 +1,196 @@
+apiVersion: '2021-10-01'
+name: ${containerName}
+type: Microsoft.ContainerInstance/containerGroups
+location: ${location}
+identity:
+  type: SystemAssigned
+properties:
+  subnetIds: [
+    {
+      id: "/subscriptions/${azureSubscriptionId}/resourceGroups/${resourceGroup}/providers/Microsoft.Network/virtualNetworks/${vnetName}/subnets/${subnetName}"
+    }
+  ]
+  containers:
+  - name: provisioner
+    properties:
+      image: ${acrName}.azurecr.io/provisioner:latest
+      environmentVariables:
+      - name: SCALER_JOB_INTERVAL
+        value: 60
+      - name: SCALER_JOB_TIMEOUT
+        value: 300
+      - name: SCALER_JOB_DELAY
+        value: 5
+      - name: SCALER_POOL_CAPACITY
+        value: 3
+      - name: SCALER_GEO_NAME
+        value: ${geoName}
+      - name: SCALER_WARMPOOL_SIZE
+        value: 3
+      - name: SCALER_WARMPOOL_ENABLED
+        value: "true"
+      - name: REDIS_HOST
+        value: ${redisHost}
+      - name: REDIS_PORT
+        value: ${redisPort}
+      - name: REDIS_SSL
+        value: "true"
+      - name: AZURE_SUBSCRIPTION_ID
+        value: ${azureSubscriptionId}
+      - name: AZURE_TENANT_ID
+        value: ${azureTenantId}
+      - name: AZURE_RESOURCE_GROUP
+        value: ${resourceGroup}
+      - name: AZURE_VMSS_NAME
+        value: ${vmssName}
+      - name: AZURE_APPI_INSTRUMENTATION_KEY
+        value: ${appInsightsKey}
+      - name: AZURE_APPGW_RESOURCE_GROUP
+        value: ${resourceGroup}
+      - name: AZURE_APPGW_NAME
+        value: ${appGWName}
+      - name: AZURE_APPGW_PATH_MAP_NAME
+        value: ${appGWPathMapName}
+      - name: AZURE_CONFIG_NAME
+        value: ${configName}
+      - name: AZURE_CONFIG_RESOURCE_GROUP
+        value: ${resourceGroup}
+      resources:
+        requests:
+          cpu: 1
+          memoryInGB: 1.5
+  - name: reconciler
+    properties:
+      image: ${acrName}.azurecr.io/reconciler:latest
+      environmentVariables:
+      - name: SCALER_JOB_INTERVAL
+        value: 10
+      - name: SCALER_JOB_TIMEOUT
+        value: 180
+      - name: SCALER_JOB_DELAY
+        value: 15
+      - name: SCALER_GEO_NAME
+        value: ${geoName}
+      - name: REDIS_HOST
+        value: ${redisHost}
+      - name: REDIS_PORT
+        value: ${redisPort}
+      - name: REDIS_SSL
+        value: "true"
+      - name: AZURE_SUBSCRIPTION_ID
+        value: ${azureSubscriptionId}
+      - name: AZURE_TENANT_ID
+        value: ${azureTenantId}
+      - name: AZURE_RESOURCE_GROUP
+        value: ${resourceGroup}
+      - name: AZURE_VMSS_NAME
+        value: ${vmssName}
+      - name: AZURE_APPI_INSTRUMENTATION_KEY
+        value: ${appInsightsKey}
+      resources:
+        requests:
+          cpu: 1
+          memoryInGB: 1.5
+  # - name: simulator
+  #   properties:
+  #     image: ${acrName}.azurecr.io/simulator:latest
+  #     environmentVariables:
+  #     - name: SCALER_JOB_INTERVAL
+  #       value: 10
+  #     - name: SCALER_JOB_TIMEOUT
+  #       value: 180
+  #     - name: SCALER_JOB_DELAY
+  #       value: 20
+  #     - name: SCALER_GEO_NAME
+  #       value: ${geoName}
+  #     - name: REDIS_HOST
+  #       value: ${redisHost}
+  #     - name: REDIS_PORT
+  #       value: ${redisPort}
+  #     - name: REDIS_SSL
+  #       value: "true"
+  #     - name: AZURE_SUBSCRIPTION_ID
+  #       value: ${azureSubscriptionId}
+  #     - name: AZURE_TENANT_ID
+  #       value: ${azureTenantId}
+  #     - name: AZURE_RESOURCE_GROUP
+  #       value: ${resourceGroup}
+  #     - name: AZURE_VMSS_NAME
+  #       value: ${vmssName}
+  #     - name: AZURE_APPI_INSTRUMENTATION_KEY
+  #       value: ${appInsightsKey}
+  #     resources:
+  #       requests:
+  #         cpu: 1
+  #         memoryInGB: 1.5
+  - name: starter
+    properties:
+      image: ${acrName}.azurecr.io/starter:latest
+      environmentVariables:
+      - name: SCALER_JOB_INTERVAL
+        value: 10
+      - name: SCALER_JOB_TIMEOUT
+        value: 180
+      - name: SCALER_JOB_DELAY
+        value: 30
+      - name: SCALER_GEO_NAME
+        value: ${geoName}
+      - name: REDIS_HOST
+        value: ${redisHost}
+      - name: REDIS_PORT
+        value: ${redisPort}
+      - name: REDIS_SSL
+        value: "true"
+      - name: AZURE_SUBSCRIPTION_ID
+        value: ${azureSubscriptionId}
+      - name: AZURE_TENANT_ID
+        value: ${azureTenantId}
+      - name: AZURE_RESOURCE_GROUP
+        value: ${resourceGroup}
+      - name: AZURE_VMSS_NAME
+        value: ${vmssName}
+      - name: AZURE_APPI_INSTRUMENTATION_KEY
+        value: ${appInsightsKey}
+      resources:
+        requests:
+          cpu: 1
+          memoryInGB: 1.5
+  - name: cleaner
+    properties:
+      image: ${acrName}.azurecr.io/cleaner:latest
+      environmentVariables:
+      - name: SCALER_JOB_INTERVAL
+        value: 10
+      - name: SCALER_JOB_TIMEOUT
+        value: 180
+      - name: SCALER_JOB_DELAY
+        value: 45
+      - name: SCALER_VM_RUNTIME
+        value: 480
+      - name: SCALER_GEO_NAME
+        value: ${geoName}
+      - name: REDIS_HOST
+        value: ${redisHost}
+      - name: REDIS_PORT
+        value: ${redisPort}
+      - name: REDIS_SSL
+        value: "true"
+      - name: AZURE_SUBSCRIPTION_ID
+        value: ${azureSubscriptionId}
+      - name: AZURE_TENANT_ID
+        value: ${azureTenantId}
+      - name: AZURE_RESOURCE_GROUP
+        value: ${resourceGroup}
+      - name: AZURE_VMSS_NAME
+        value: ${vmssName}
+      - name: AZURE_APPI_INSTRUMENTATION_KEY
+        value: ${appInsightsKey}
+      resources:
+        requests:
+          cpu: 1
+          memoryInGB: 1.5
+  imageRegistryCredentials:
+  - server: ${acrName}.azurecr.io
+    username: ${acrUsername}
+    password: ${acrPassword}
+  osType: Linux

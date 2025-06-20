@@ -1,0 +1,10 @@
+// Operation Counts Over Time
+customEvents
+| where name == "VMSSOperation"
+| extend 
+    operation = tostring(customDimensions.operation),
+    operationId = tostring(customDimensions.operationId),
+    region = tostring(customDimensions.region)
+| where operation == "clean" and region == "EUR/USA"
+| summarize Count = count() by bin(timestamp, 1m), operationId
+| render timechart

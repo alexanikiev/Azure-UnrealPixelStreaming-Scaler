@@ -1,0 +1,58 @@
+trigger: none
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+parameters:
+  - name: componentToBuild
+    type: string
+    default: provisioner
+    values:
+      - provisioner
+      - reconciler
+      - simulator
+      - starter
+      - cleaner
+
+variables:
+  - name: acrName
+    value: 'abc'
+  - name: imageRepository
+    value: ${{ parameters.componentToBuild }}
+  - name: tag
+    value: '$(Build.BuildId)'
+
+steps:
+- checkout: self
+  displayName: 'Checkout repository'
+
+- task: AzureCLI@2
+  displayName: 'Login to ACR'
+  inputs:
+    azureSubscription: 'xyz'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      az acr login -n $(acrName)
+
+- task: Docker@2
+  displayName: 'Build Docker image for ${{ parameters.componentToBuild }}'
+  inputs:
+    command: build
+    dockerfile: '$(Build.SourcesDirectory)/Dockerfile'
+    tags: |
+      $(tag)
+      latest
+    buildContext: '$(Build.SourcesDirectory)'
+    repository: '$(acrName).azurecr.io/$(imageRepository)'
+    arguments: |
+      --build-arg SCALER_JOB=${{ parameters.componentToBuild }}
+
+- task: Docker@2
+  displayName: 'Push Docker image for ${{ parameters.componentToBuild }} to ACR'
+  inputs:
+    command: push
+    repository: '$(acrName).azurecr.io/$(imageRepository)'
+    tags: |
+      $(tag)
+      latest

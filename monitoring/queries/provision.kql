@@ -1,0 +1,16 @@
+// Operation Durations Over Time
+customEvents
+| where name == "VMSSOperation"
+| extend 
+    operation = tostring(customDimensions.operation),
+    duration = toint(customDimensions.duration),
+    operationId = tostring(customDimensions.operationId),
+    region = tostring(customDimensions.region)
+| where operation == "provision" and region == "EUR/USA"
+| project 
+    timestamp,
+    operation,
+    duration,
+    operationId,
+    region
+| render timechart
