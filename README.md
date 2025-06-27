@@ -20,7 +20,7 @@ Make everything as simple as possible, but not simpler.
 
 ## Getting Started
 
-TBD.
+The bigger project is develop a web site with embedded Unreal Pixel Streaming experience in the web browser. The concrete task is develop Azure Unreal Pixel Streaming Scaler which will dynamically reprovision new VMSS instances with Unreal for pixel streaming over time.
 
 Solution architecture of this template is described in detail in the following Medium articles:
 
@@ -131,7 +131,12 @@ Note: In our benchmarking using local TURN sometimes showed better results than 
 
 ### Warm Start vs Cold Start Performance
 
-TBD.
+The necessity to strike the right balance between performance and cost of Unreal Pixel Streaming implementation in Azure led to a design choice of warm pool and cold pool of VMSS instances. Specifically, VMs in warm pool would enjoy much faster start time at the expense of being more constly (Stopped status) because of GPU-compute continuous cost, and VMs in cold pool would not incur GPU-compute cost until started (Stopped/Deallocated status) but the start time would be significanly slower.
+
+We benchmarked the start time for warm pool and cold pool VMs in different regions in Azure:
+
+1. Warm start: ~ 5 seconds on average to start the VM (Stopped -> Started status)
+2. Cold start: ~ 100 seconds on average to start the VM (Stopped/Deallocated -> Started status)
 
 ## Disclaimer
 
