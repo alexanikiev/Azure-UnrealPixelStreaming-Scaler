@@ -24,7 +24,7 @@ The bigger project is develop a web site with embedded Unreal Pixel Streaming ex
 
 Solution architecture of this template is described in detail in the following Medium articles:
 
-* [TBD](https://alexanikiev.medium.com/) (Medium article on "How we built Arina's Story in Azure Cloud" will be published soon) 
+* [How we built Arina's Story in Azure Cloud](https://alexanikiev.medium.com/how-we-built-told-arinas-story-in-azure-cloud-fbac93706e2b)
 
 Solution demo videos and technical walkthroughs are available on YouTube:
 
